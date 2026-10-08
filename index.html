@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #07050a;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #07050a;
+      }
+
+      /* Profundidade: cada .par é um plano (o player interativo move esses planos com o mouse).
+         Dentro dele, .layer usa coordenadas da foto original (1335x2000) e a "câmera" anima x/y/scale. */
+      .par {
+        position: absolute;
+        inset: -40px;
+        width: calc(100% + 80px);
+        height: calc(100% + 80px);
+        pointer-events: none;
+      }
+      .layer {
+        position: absolute;
+        left: 40px;
+        top: 40px;
+        width: 1335px;
+        height: 2000px;
+        transform-origin: 0 0;
+      }
+      .layer img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1335px;
+        height: 2000px;
+        display: block;
+      }
+
+      /* ---------- cenário ---------- */
+      #window-glow {
+        position: absolute;
+        left: 215px;
+        top: -260px;
+        width: 1100px;
+        height: 1500px;
+        border-radius: 50%;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(255, 246, 228, 0.95) 0%,
+          rgba(255, 214, 160, 0.45) 38%,
+          rgba(255, 170, 110, 0) 70%
+        );
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .pane {
+        position: absolute;
+        background: linear-gradient(180deg, #ff6a3d, #ff2a3a 55%, #ff8a3c);
+        filter: blur(7px);
+        mix-blend-mode: screen;
+        opacity: 0;
+        border-radius: 6px;
+      }
+      #rays {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1335px;
+        height: 2000px;
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .ray {
+        position: absolute;
+        top: 60px;
+        height: 2300px;
+        transform-origin: 50% 0;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 236, 200, 0) 0%,
+          rgba(255, 228, 180, 0.55) 18%,
+          rgba(255, 196, 130, 0.22) 55%,
+          rgba(255, 180, 120, 0) 100%
+        );
+        filter: blur(22px);
+      }
+      #floor-sheen {
+        position: absolute;
+        left: 0;
+        top: 1700px;
+        width: 420px;
+        height: 300px;
+        background: linear-gradient(
+          100deg,
+          rgba(255, 220, 170, 0) 0%,
+          rgba(255, 226, 180, 0.55) 50%,
+          rgba(255, 220, 170, 0) 100%
+        );
+        filter: blur(18px);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+
+      /* ---------- casal ---------- */
+      #aura {
+        position: absolute;
+        inset: 0;
+        background: url("assets/casal.webp") 0 0 / 1335px 2000px no-repeat;
+        filter: blur(34px) brightness(2.4) sepia(1) saturate(2.6) hue-rotate(-12deg);
+        opacity: 0;
+        mix-blend-mode: screen;
+      }
+      #casal {
+        filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+      }
+      #fx {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1335px;
+        height: 2000px;
+        overflow: visible;
+      }
+      .spark,
+      .mote,
+      .dust,
+      .glint,
+      .burst {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .dust {
+        background: radial-gradient(circle, rgba(255, 244, 224, 1) 0%, rgba(255, 220, 170, 0) 70%);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .mote {
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        background: radial-gradient(circle, #fffbe8 0%, #ffd27a 35%, rgba(255, 170, 60, 0) 72%);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .spark {
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
+        background: radial-gradient(circle, #ffffff 0%, #ffe1a0 40%, rgba(255, 150, 80, 0) 72%);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .burst {
+        width: 260px;
+        height: 260px;
+        margin: -130px 0 0 -130px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 1) 0%,
+          rgba(255, 226, 170, 0.8) 22%,
+          rgba(255, 120, 90, 0.25) 48%,
+          rgba(255, 90, 80, 0) 70%
+        );
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      .glint {
+        width: 120px;
+        height: 120px;
+        margin: -60px 0 0 -60px;
+        opacity: 0;
+        mix-blend-mode: screen;
+      }
+      .glint::before,
+      .glint::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        margin-left: -2px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 50%, rgba(255, 255, 255, 0));
+        border-radius: 2px;
+      }
+      .glint::after {
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 4px;
+        margin: -2px 0 0 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 50%, rgba(255, 255, 255, 0));
+      }
+      .glint-core {
+        position: absolute;
+        left: 35px;
+        top: 35px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #fff 0%, rgba(255, 230, 170, 0.6) 35%, rgba(255, 200, 120, 0) 70%);
+      }
+
+      /* ---------- primeiro plano ---------- */
+      .bokeh {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 214, 160, 0.55) 0%, rgba(255, 170, 120, 0.18) 55%, rgba(255, 150, 100, 0) 72%);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+
+      /* ---------- acabamento ---------- */
+      #grade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, #ffb26b 0%, #ff8f6b 45%, #3a1d2e 100%);
+        mix-blend-mode: soft-light;
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      #vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 45%, rgba(8, 4, 10, 0.75) 100%);
+        pointer-events: none;
+      }
+      #flash {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 55% 30%, #fff8ec 0%, #ffe2bd 55%, #ffc89a 100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .bar {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 150px;
+        background: #07050a;
+        pointer-events: none;
+      }
+      #bar-top {
+        top: 0;
+        transform-origin: 50% 0;
+      }
+      #bar-bottom {
+        bottom: 0;
+        transform-origin: 50% 100%;
+      }
+      #veil {
+        position: absolute;
+        inset: 0;
+        background: #07050a;
+        pointer-events: none;
+      }
+
+      /* zonas clicáveis usadas apenas pelo player interativo (invisíveis no vídeo) */
+      .hotspot {
+        position: absolute;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!-- plano de fundo: o cenário (vitral, parede, madeira, piso) -->
+      <div class="par" id="par-bg">
+        <div class="layer" id="bg" data-layout-allow-overflow>
+          <img id="plate" src="assets/cenario.jpg" alt="" />
+          <div id="window-glow" data-layout-allow-overflow></div>
+          <div class="pane" data-layout-allow-overflow style="left: 578px; top: 0; width: 52px; height: 34px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 578px; top: 44px; width: 52px; height: 234px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 578px; top: 289px; width: 52px; height: 86px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 578px; top: 455px; width: 52px; height: 244px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 881px; top: 0; width: 50px; height: 31px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 881px; top: 44px; width: 50px; height: 231px"></div>
+          <div class="pane" data-layout-allow-overflow style="left: 881px; top: 283px; width: 50px; height: 228px"></div>
+          <div id="rays"></div>
+          <div id="floor-sheen"></div>
+          <div class="hotspot" id="hs-window" data-hotspot="window" style="left: 400px; top: 0; width: 740px; height: 360px; border-radius: 0"></div>
+        </div>
+      </div>
+
+      <!-- plano médio: o casal e a luz do encontro -->
+      <div class="par" id="par-mid">
+        <div class="layer" id="mid" data-layout-allow-overflow>
+          <div id="dust-field"></div>
+          <div id="aura"></div>
+          <img id="casal" src="assets/casal.webp" alt="" />
+          <svg id="fx" viewBox="0 0 1335 2000" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="6" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <linearGradient id="goldGrad" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stop-color="#ffb347" stop-opacity="0" />
+                <stop offset="1" stop-color="#fff1c9" />
+              </linearGradient>
+              <linearGradient id="roseGrad" x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ff3b3b" stop-opacity="0" />
+                <stop offset="1" stop-color="#ffd0c0" />
+              </linearGradient>
+            </defs>
+            <!-- caminho dourado: nasce no passo dela -->
+            <path
+              id="path-a"
+              d="M262 1530 C 40 1250, 330 1010, 360 860 S 470 600, 588 572"
+              fill="none"
+              stroke="url(#goldGrad)"
+              stroke-width="7"
+              stroke-linecap="round"
+              filter="url(#glow)"
+              opacity="0"
+            />
+            <!-- caminho rubi: nasce do vitral vermelho -->
+            <path
+              id="path-b"
+              d="M905 120 C 1010 300, 980 430, 800 470 S 640 520, 588 572"
+              fill="none"
+              stroke="url(#roseGrad)"
+              stroke-width="7"
+              stroke-linecap="round"
+              filter="url(#glow)"
+              opacity="0"
+            />
+            <circle id="head-a" r="14" fill="#fff6dc" filter="url(#glow)" opacity="0" />
+            <circle id="head-b" r="14" fill="#ffe0d6" filter="url(#glow)" opacity="0" />
+            <!-- ondas do encontro -->
+            <circle class="ring" cx="588" cy="572" r="40" fill="none" stroke="#ffe7b8" stroke-width="5" opacity="0" />
+            <circle class="ring" cx="588" cy="572" r="40" fill="none" stroke="#ffc1a6" stroke-width="4" opacity="0" />
+            <circle class="ring" cx="588" cy="572" r="40" fill="none" stroke="#fff3dc" stroke-width="3" opacity="0" />
+            <!-- coração de luz em volta dos rostos -->
+            <path
+              id="heart"
+              d="M598 760 C 470 680, 360 590, 372 470 C 382 372, 470 330, 540 368 C 568 384, 588 410, 598 438 C 608 410, 628 384, 656 368 C 726 330, 814 372, 824 470 C 836 590, 726 680, 598 760 Z"
+              fill="none"
+              stroke="#ffe3ad"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              filter="url(#glow)"
+              opacity="0"
+            />
+          </svg>
+          <div class="burst" id="burst" style="left: 588px; top: 572px"></div>
+          <div id="spark-field"></div>
+          <div id="mote-field"></div>
+          <div class="glint" id="glint-heel" style="left: 262px; top: 1525px"><div class="glint-core"></div></div>
+          <div class="glint" id="glint-ring" style="left: 556px; top: 992px"><div class="glint-core"></div></div>
+          <div class="glint" id="glint-hands" style="left: 870px; top: 828px"><div class="glint-core"></div></div>
+          <div class="glint" id="glint-watch" style="left: 955px; top: 812px"><div class="glint-core"></div></div>
+          <div class="hotspot" id="hs-faces" data-hotspot="faces" style="left: 470px; top: 400px; width: 260px; height: 300px"></div>
+          <div class="hotspot" id="hs-hands" data-hotspot="hands" style="left: 780px; top: 740px; width: 220px; height: 170px"></div>
+          <div class="hotspot" id="hs-step" data-hotspot="step" style="left: 200px; top: 1450px; width: 220px; height: 330px"></div>
+        </div>
+      </div>
+
+      <!-- primeiro plano: bokeh de luz, mais perto da câmera -->
+      <div class="par" id="par-fg">
+        <div class="layer" id="fg" data-layout-allow-overflow></div>
+      </div>
+
+      <div id="grade"></div>
+      <div id="flash"></div>
+      <div id="vignette"></div>
+      <div class="bar" id="bar-top"></div>
+      <div class="bar" id="bar-bottom"></div>
+      <div id="veil"></div>
+    </div>
+
+    <script>
+      (function () {
+        window.__timelines = window.__timelines || {};
+        const W = 1080, H = 1920, IW = 1335, IH = 2000;
+        const MEET = { x: 588, y: 572 };
+
+        // PRNG com semente: o vídeo é igual em todo render
+        let seed = 20250214;
+        const rand = () => {
+          seed |= 0;
+          seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        const rr = (a, b) => a + (b - a) * rand();
+
+        // ---------- geração determinística de elementos ----------
+        const rays = document.getElementById("rays");
+        const RAYS = [
+          [470, 150, 14], [560, 210, 20], [660, 120, 9], [760, 260, 16],
+          [880, 140, 24], [960, 200, 12], [1040, 110, 28],
+        ];
+        RAYS.forEach(([x, w, r]) => {
+          const el = document.createElement("div");
+          el.className = "ray";
+          el.style.left = x - w / 2 + "px";
+          el.style.width = w + "px";
+          el.dataset.rot = r;
+          rays.appendChild(el);
+        });
+
+        const dustField = document.getElementById("dust-field");
+        const dust = [];
+        for (let i = 0; i < 80; i++) {
+          const el = document.createElement("div");
+          el.className = "dust";
+          const s = rr(4, 13);
+          el.style.width = el.style.height = s + "px";
+          el.style.left = rr(380, 1160) + "px";
+          el.style.top = rr(40, 1650) + "px";
+          dustField.appendChild(el);
+          dust.push(el);
+        }
+
+        const sparkField = document.getElementById("spark-field");
+        const sparks = [];
+        for (let i = 0; i < 28; i++) {
+          const el = document.createElement("div");
+          el.className = "spark";
+          el.style.left = MEET.x + "px";
+          el.style.top = MEET.y + "px";
+          const a = (i / 28) * Math.PI * 2 + rr(-0.12, 0.12);
+          const d = rr(110, 300);
+          el.dataset.dx = Math.cos(a) * d;
+          el.dataset.dy = Math.sin(a) * d;
+          sparkField.appendChild(el);
+          sparks.push(el);
+        }
+
+        const moteField = document.getElementById("mote-field");
+        const motes = [];
+        for (let i = 0; i < 36; i++) {
+          const el = document.createElement("div");
+          el.className = "mote";
+          el.style.left = rr(220, 1180) + "px";
+          el.style.top = rr(1650, 1950) + "px";
+          moteField.appendChild(el);
+          motes.push(el);
+        }
+
+        const fg = document.getElementById("fg");
+        const bokeh = [];
+        for (let i = 0; i < 9; i++) {
+          const el = document.createElement("div");
+          el.className = "bokeh";
+          el.setAttribute("data-layout-allow-overflow", "");
+          const s = rr(140, 340);
+          el.style.width = el.style.height = s + "px";
+          el.style.left = rr(-100, 1200) + "px";
+          el.style.top = rr(-100, 1900) + "px";
+          fg.appendChild(el);
+          bokeh.push(el);
+        }
+
+        // ---------- câmera com parallax ----------
+        const bg = document.getElementById("bg");
+        const mid = document.getElementById("mid");
+        const DEPTH_BG = 0.955;
+        function camera(cx, cy, s) {
+          const sb = Math.max(0.965, s * DEPTH_BG);
+          let xb = W / 2 - cx * sb, yb = H / 2 - cy * sb;
+          xb = Math.min(0, Math.max(W - IW * sb, xb));
+          yb = Math.min(0, Math.max(H - IH * sb, yb));
+          // o plano médio olha para o mesmo ponto, porém com escala maior: parallax real
+          const fx = (W / 2 - xb) / sb, fy = (H / 2 - yb) / sb;
+          return {
+            bg: { x: xb, y: yb, scale: sb },
+            mid: { x: W / 2 - fx * s, y: H / 2 - fy * s, scale: s },
+            fx, fy, s,
+          };
+        }
+
+        const tl = gsap.timeline({ paused: true, defaults: { ease: "sine.inOut" } });
+        const shot = (t, dur, cx, cy, s, ease) => {
+          const c = camera(cx, cy, s);
+          tl.to(bg, { ...c.bg, duration: dur, ease }, t);
+          tl.to(mid, { ...c.mid, duration: dur, ease }, t);
+        };
+        const start = camera(765, 300, 1.6);
+        tl.set(bg, start.bg, 0);
+        tl.set(mid, start.mid, 0);
+        tl.set(fg, { x: -40, y: 0, scale: 1 }, 0);
+
+        // 1) a janela acende (0 – 3s)
+        tl.to("#veil", { opacity: 0, duration: 1.6, ease: "power2.out" }, 0.15);
+        tl.fromTo("#window-glow", { opacity: 0, scale: 0.6 }, { opacity: 0.85, scale: 1, duration: 2.4, ease: "power2.out" }, 0.2);
+        tl.to(".pane", { opacity: 0.9, duration: 0.5, stagger: { each: 0.18, from: "start" }, ease: "power2.out" }, 0.5);
+        tl.to(".pane", { opacity: 0.45, duration: 0.9, stagger: 0.1, yoyo: true, repeat: 5, ease: "sine.inOut" }, 2.2);
+        tl.to("#rays", { opacity: 0.85, duration: 2.2, ease: "power1.out" }, 0.6);
+        gsap.utils.toArray(".ray").forEach((el, i) => {
+          const r = +el.dataset.rot;
+          tl.fromTo(el, { rotation: r + 6, scaleY: 0.35 }, { rotation: r - 4, scaleY: 1, duration: 15, ease: "none" }, 0);
+          tl.to(el, { opacity: 0.45, duration: 1.1 + (i % 3) * 0.35, yoyo: true, repeat: 5, ease: "sine.inOut" }, 1.5 + i * 0.2);
+        });
+        shot(0, 3, 765, 430, 1.45, "sine.inOut");
+
+        // poeira flutuando na luz (o filme todo)
+        dust.forEach((el) => {
+          const life = rr(5, 9);
+          const t0 = rr(0, 6);
+          tl.fromTo(el, { opacity: 0, x: 0, y: 0 }, { x: rr(-60, 60), y: rr(-220, -90), duration: 15 - t0, ease: "none" }, t0);
+          tl.to(el, { opacity: rr(0.5, 1), duration: life / 2, yoyo: true, repeat: 1, ease: "sine.inOut" }, t0);
+          tl.to(el, { opacity: rr(0.3, 0.8), duration: 2, ease: "sine.inOut" }, Math.min(13, t0 + life));
+        });
+
+        // bokeh de primeiro plano (move mais que o resto = profundidade)
+        bokeh.forEach((el, i) => {
+          tl.fromTo(el, { opacity: 0 }, { opacity: rr(0.35, 0.8), duration: 2, ease: "sine.out" }, 1 + i * 0.25);
+          tl.to(el, { y: rr(-260, -120), x: rr(-80, 80), duration: 14, ease: "none" }, 1);
+        });
+        tl.to(fg, { x: 40, y: -80, duration: 15, ease: "none" }, 0);
+
+        // 2) o passo: câmera desce até o pé levantado (3 – 5s)
+        shot(3, 2, 380, 1600, 1.55, "power3.inOut");
+        tl.fromTo("#floor-sheen", { x: -420, opacity: 0 }, { x: 1300, opacity: 1, duration: 1.8, ease: "power2.inOut" }, 3.6);
+        tl.to("#floor-sheen", { opacity: 0, duration: 0.4 }, 5.4);
+        tl.fromTo("#glint-heel", { opacity: 0, scale: 0.2, rotation: 0 }, { opacity: 1, scale: 1, rotation: 45, duration: 0.45, ease: "back.out(2)" }, 4.5);
+        tl.to("#glint-heel", { opacity: 0, scale: 0.4, rotation: 90, duration: 0.5, ease: "power2.in" }, 5.0);
+
+        // 3) sobe pelos corpos até o encontro dos olhares (5 – 7.6s)
+        shot(5, 2.6, 600, 590, 2.0, "power2.inOut");
+
+        // dois rastros de luz – o passo dela e o vitral – correm até o ponto do encontro
+        const comet = (pathSel, headSel, t, dur) => {
+          const path = document.querySelector(pathSel);
+          const head = document.querySelector(headSel);
+          const len = path.getTotalLength();
+          const p0 = path.getPointAtLength(0);
+          gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+          gsap.set(head, { attr: { cx: p0.x, cy: p0.y } });
+          const prog = { v: 0 };
+          tl.to(path, { opacity: 1, duration: 0.2 }, t);
+          tl.to(head, { opacity: 1, duration: 0.2 }, t);
+          tl.to(path, { strokeDashoffset: 0, duration: dur, ease: "power2.in" }, t);
+          tl.to(prog, {
+            v: 1,
+            duration: dur,
+            ease: "power2.in",
+            onUpdate: () => {
+              const p = path.getPointAtLength(prog.v * len);
+              head.setAttribute("cx", p.x);
+              head.setAttribute("cy", p.y);
+            },
+          }, t);
+          tl.to(path, { opacity: 0, duration: 0.9, ease: "power1.out" }, t + dur + 0.05);
+          tl.to(head, { opacity: 0, duration: 0.15 }, t + dur);
+        };
+        comet("#path-a", "#head-a", 5.9, 1.7);
+        comet("#path-b", "#head-b", 6.0, 1.6);
+
+        // 4) o encontro: explosão de luz, ondas, coração (7.6 – 10s)
+        const MEET_T = 7.6;
+        tl.fromTo("#burst", { opacity: 0, scale: 0.1 }, { opacity: 1, scale: 1.6, duration: 0.35, ease: "power3.out" }, MEET_T);
+        tl.to("#burst", { opacity: 0, scale: 3.2, duration: 1.4, ease: "power2.out" }, MEET_T + 0.35);
+        tl.fromTo("#flash", { opacity: 0 }, { opacity: 0.55, duration: 0.12, ease: "power2.out" }, MEET_T);
+        tl.to("#flash", { opacity: 0, duration: 0.9, ease: "power2.out" }, MEET_T + 0.12);
+        gsap.utils.toArray(".ring").forEach((el, i) => {
+          tl.set(el, { attr: { r: 30 }, opacity: 0.95 }, MEET_T + i * 0.18);
+          tl.to(el, { attr: { r: 330 + i * 70 }, opacity: 0, duration: 1.6 + i * 0.25, ease: "power2.out" }, MEET_T + i * 0.18);
+        });
+        sparks.forEach((el, i) => {
+          tl.set(el, { x: 0, y: 0, opacity: 1, scale: 1.4 }, MEET_T + 0.02);
+          tl.to(
+            el,
+            { x: +el.dataset.dx, y: +el.dataset.dy + 40, opacity: 0, scale: 0.3, duration: 1.3 + (i % 4) * 0.15, ease: "power3.out" },
+            MEET_T + 0.02
+          );
+        });
+        tl.fromTo("#aura", { opacity: 0 }, { opacity: 0.6, duration: 0.5, ease: "power2.out" }, MEET_T);
+        tl.to("#aura", { opacity: 0.25, duration: 1.6, ease: "sine.inOut" }, MEET_T + 0.6);
+        tl.to("#aura", { opacity: 0.45, duration: 1.2, yoyo: true, repeat: 3, ease: "sine.inOut" }, MEET_T + 2.2);
+        const heart = document.getElementById("heart");
+        const hl = heart.getTotalLength();
+        gsap.set(heart, { strokeDasharray: hl, strokeDashoffset: hl });
+        tl.to(heart, { opacity: 1, duration: 0.2 }, MEET_T + 0.3);
+        tl.to(heart, { strokeDashoffset: 0, duration: 1.5, ease: "power2.inOut" }, MEET_T + 0.3);
+        tl.to(heart, { attr: { "stroke-width": 7 }, duration: 0.6, yoyo: true, repeat: 1, ease: "sine.inOut" }, MEET_T + 1.8);
+        tl.to(heart, { opacity: 0, duration: 1, ease: "power1.in" }, MEET_T + 3.1);
+        shot(MEET_T, 2.2, 592, 572, 2.25, "sine.out");
+
+        // 5) abre para o cenário inteiro, brilhos nas mãos e na aliança (9.8 – 12.5s)
+        shot(9.8, 2.6, 667, 1000, 1.0, "expo.inOut");
+        [["#glint-ring", 10.9], ["#glint-hands", 11.25], ["#glint-watch", 11.55], ["#glint-heel", 11.9]].forEach(([sel, t]) => {
+          tl.fromTo(sel, { opacity: 0, scale: 0.2, rotation: 0 }, { opacity: 1, scale: 1.15, rotation: 45, duration: 0.4, ease: "back.out(2)" }, t);
+          tl.to(sel, { opacity: 0, scale: 0.3, rotation: 100, duration: 0.55, ease: "power2.in" }, t + 0.45);
+        });
+        motes.forEach((el, i) => {
+          const t0 = 9.6 + (i % 12) * 0.2;
+          tl.fromTo(el, { opacity: 0, x: 0, y: 0, scale: rr(0.6, 1.4) }, { opacity: 1, duration: 0.6, ease: "sine.out" }, t0);
+          tl.to(el, { y: rr(-1300, -700), x: rr(-120, 120), duration: 14.6 - t0, ease: "power1.out" }, t0);
+          tl.to(el, { opacity: 0, duration: 1.2, ease: "sine.in" }, 13.4);
+        });
+
+        // 6) final: a luz do vitral inunda a cena e fecha em loop (12.5 – 15s)
+        shot(12.4, 2.6, 667, 960, 1.07, "sine.inOut");
+        tl.to("#window-glow", { opacity: 1, scale: 1.25, duration: 2, ease: "power2.inOut" }, 12.2);
+        tl.to("#rays", { opacity: 1, duration: 1.6 }, 12.2);
+        tl.fromTo("#bar-top", { scaleY: 0 }, { scaleY: 1, duration: 1.2, ease: "power3.inOut" }, 12.0);
+        tl.fromTo("#bar-bottom", { scaleY: 0 }, { scaleY: 1, duration: 1.2, ease: "power3.inOut" }, 12.0);
+        tl.to("#flash", { opacity: 0.4, duration: 1.2, ease: "power2.in" }, 13.2);
+        tl.to("#veil", { opacity: 1, duration: 0.6, ease: "power2.in" }, 14.4);
+
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

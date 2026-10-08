@@ -1,0 +1,20 @@
+{
+  "name": "encontro-motion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Motion design interativo do encontro do casal — composição HyperFrames + player Node.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "studio": "hyperframes preview",
+    "check": "hyperframes check",
+    "snapshot": "hyperframes snapshot --at 1.5,4.5,7.0,8.2,11.2,13.5",
+    "render": "hyperframes render -q high -f 30 -o renders/encontro.mp4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "hyperframes": "0.8.142"
+  }
+}
