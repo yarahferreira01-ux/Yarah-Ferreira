@@ -52,3 +52,10 @@ player/             página interativa (iframe + controles + interações)
 assets/             cenário, recorte do casal, GSAP local
 video/encontro.mp4  render final
 ```
+
+---
+
+## ICS Soluções Comerciais
+
+Motion design interativo da marca ICS, também em HyperFrames + Node.js: veja [`ics/`](ics/README.md)
+(`cd ics && npm install && npm start`). Vídeo renderizado em `ics/video/ics.mp4`.

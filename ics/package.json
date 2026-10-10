@@ -1,0 +1,20 @@
+{
+  "name": "ics-motion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ICS Soluções Comerciais — motion design interativo da marca (composição HyperFrames + player Node.js)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "studio": "hyperframes preview",
+    "check": "hyperframes check",
+    "snapshot": "hyperframes snapshot --at 1.2,2.8,3.8,5.6,7.0,8.6,10.5",
+    "render": "hyperframes render -q high -f 30 -o renders/ics.mp4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "hyperframes": "0.8.142"
+  }
+}
