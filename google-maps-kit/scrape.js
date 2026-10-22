@@ -2,6 +2,7 @@
 // Extrator de leads do Google Maps via Places API (New) — sem dependências, Node 18+.
 // Uso: node scrape.js "dentista em Goiânia" [--grid 3] [--emails] [--out saida]
 //      node scrape.js --file buscas.txt --emails
+//      node scrape.js "fisioterapia" --perto "Diamond Center, Teresina" --raio 1500
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,7 +33,10 @@ const COLUMNS = [
 // ---------- argumentos ----------
 
 function parseArgs(argv) {
-  const opts = { queries: [], grid: 1, emails: false, out: 'resultados', lang: 'pt-BR', region: 'BR', max: Infinity };
+  const opts = {
+    queries: [], grid: 1, emails: false, out: 'resultados', lang: 'pt-BR', region: 'BR', max: Infinity,
+    near: '', radius: 1500, exclude: null, keep: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
@@ -43,6 +47,10 @@ function parseArgs(argv) {
     else if (a === '--lang') opts.lang = next();
     else if (a === '--region') opts.region = next();
     else if (a === '--max') opts.max = parseInt(next(), 10) || Infinity;
+    else if (a === '--perto') opts.near = next();
+    else if (a === '--raio') opts.radius = parseInt(next(), 10) || 1500;
+    else if (a === '--excluir') opts.exclude = new RegExp(next(), 'i');
+    else if (a === '--manter') opts.keep = new RegExp(next(), 'i');
     else if (a === '-h' || a === '--help') opts.help = true;
     else opts.queries.push(a);
   }
@@ -125,6 +133,27 @@ async function resolveViewport(query, opts, apiKey) {
   const m = query.match(/\s(?:em|in|near|perto de)\s+(.+)$/i);
   const data = await searchText({ textQuery: m ? m[1] : query, languageCode: opts.lang, regionCode: opts.region, pageSize: 1 }, apiKey);
   return data.places?.[0]?.viewport;
+}
+
+// Área quadrada em volta de um ponto de referência ("Diamond Center, Teresina" ou "-5.06,-42.79").
+async function areaAround(near, radius, opts, apiKey) {
+  let point;
+  const m = near.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (m) {
+    point = { latitude: Number(m[1]), longitude: Number(m[2]) };
+  } else {
+    const data = await searchText({ textQuery: near, languageCode: opts.lang, regionCode: opts.region, pageSize: 1 }, apiKey);
+    const ref = data.places?.[0];
+    if (!ref?.location) throw new Error(`não achei o ponto de referência "${near}"`);
+    console.log(`Referência: ${ref.displayName?.text} — ${ref.formattedAddress}`);
+    point = ref.location;
+  }
+  const dLat = radius / 111320;
+  const dLng = radius / (111320 * Math.cos((point.latitude * Math.PI) / 180));
+  return {
+    low: { latitude: point.latitude - dLat, longitude: point.longitude - dLng },
+    high: { latitude: point.latitude + dLat, longitude: point.longitude + dLng },
+  };
 }
 
 // ---------- enriquecimento (site) ----------
@@ -230,6 +259,10 @@ Opções:
   --grid N     divide a cidade em N x N áreas para passar do limite de 60 por busca (ex.: 3)
   --emails     visita o site de cada lugar e procura e-mail, Instagram e WhatsApp
   --max N      para cada busca depois de N resultados
+  --perto TXT  busca só em volta de um lugar ("Diamond Center, Teresina") ou de "lat,lng"
+  --raio M     distância em metros do --perto (padrão: 1500)
+  --excluir RE descarta lugares cujo nome/categoria bate com a expressão (ex.: "dentist|odonto")
+  --manter RE  mantém mesmo assim os que batem com esta (ex.: "buco|maxilo")
   --out NOME   prefixo dos arquivos de saída (padrão: resultados -> resultados.csv/.json)
   --lang XX    idioma dos resultados (padrão: pt-BR)
   --region XX  país (padrão: BR)
@@ -250,11 +283,15 @@ async function main() {
     process.exit(1);
   }
 
+  const nearArea = opts.near ? await areaAround(opts.near, opts.radius, opts, apiKey) : null;
   const byId = new Map();
+  let excluded = 0;
   for (const query of opts.queries) {
     let found = [];
-    if (opts.grid > 1) {
-      const viewport = await resolveViewport(query, opts, apiKey);
+    if (nearArea && opts.grid === 1) {
+      found = await searchAllPages(query, opts, apiKey, nearArea);
+    } else if (opts.grid > 1) {
+      const viewport = nearArea || (await resolveViewport(query, opts, apiKey));
       if (!viewport) {
         console.warn(`! não achei a área de "${query}", buscando sem grade`);
         found = await searchAllPages(query, opts, apiKey);
@@ -273,10 +310,15 @@ async function main() {
     }
     let added = 0;
     for (const p of found.slice(0, opts.max)) {
-      if (!byId.has(p.id)) {
-        byId.set(p.id, toRow(p, query));
-        added++;
+      if (byId.has(p.id)) continue;
+      const row = toRow(p, query);
+      const label = `${row.nome} ${row.categoria}`;
+      if (opts.exclude?.test(label) && !opts.keep?.test(label)) {
+        excluded++;
+        continue;
       }
+      byId.set(p.id, row);
+      added++;
     }
     console.log(`✓ ${query}: ${found.length} encontrados, ${added} novos`);
   }
@@ -297,6 +339,7 @@ async function main() {
 
   writeOutputs(rows, opts.out);
   const n = (k) => rows.filter((r) => r[k]).length;
+  if (excluded) console.log(`${excluded} descartados pelo --excluir`);
   console.log(`\n${rows.length} lugares salvos em ${opts.out}.csv e ${opts.out}.json`);
   console.log(`  com telefone: ${n('telefone')} | WhatsApp: ${n('whatsapp')} | site: ${n('site')}` +
     (opts.emails ? ` | e-mail: ${n('emails')} | Instagram: ${n('instagram')}` : ''));

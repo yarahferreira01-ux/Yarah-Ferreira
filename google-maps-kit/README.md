@@ -39,6 +39,13 @@ node scrape.js --file buscas.txt --emails
 node scrape.js "academia em São Paulo" --grid 4 --emails --out saida/academias-sp
 ```
 
+Pronto para um bairro: área da saúde num raio de 1,5 km do Diamond Center (Fátima, Teresina),
+sem dentistas e com bucomaxilos. As buscas ficam em `buscas-saude-fatima.txt`.
+
+```bash
+npm run saude-fatima      # -> saida/saude-fatima.csv
+```
+
 O resultado sai em dois arquivos: `resultados.csv` (abre no Excel/Google Sheets, com acentos
 certos) e `resultados.json`.
 
@@ -50,6 +57,10 @@ certos) e `resultados.json`.
 | `--grid N` | divide a cidade numa grade N x N e busca em cada área. Use 3–5 para capitais |
 | `--emails` | visita o site de cada empresa (home, `/contato`, `/contact`) e extrai e-mail, Instagram e WhatsApp |
 | `--max N` | para cada busca depois de N resultados (bom para testar sem gastar) |
+| `--perto TXT` | busca só em volta de um lugar (`"Diamond Center, Teresina"`) ou de `"lat,lng"` |
+| `--raio M` | distância em metros do `--perto` (padrão 1500) |
+| `--excluir RE` | descarta lugares cujo nome/categoria bate com a expressão (ex.: `"dentist\|odonto"`) |
+| `--manter RE` | mantém mesmo assim os que batem com esta (ex.: `"buco\|maxilo"`) |
 | `--out NOME` | prefixo dos arquivos de saída (padrão `resultados`) |
 | `--lang` / `--region` | idioma e país (padrão `pt-BR` / `BR`) |
 

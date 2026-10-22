@@ -1,0 +1,24 @@
+# Área da saúde em volta do Diamond Center (Fátima, Teresina-PI), sem dentistas.
+# Rodar com:  npm run saude-fatima
+clínica médica
+clínico geral
+consultório médico
+fisioterapia
+pilates clínico
+cirurgião bucomaxilofacial
+dermatologista
+ginecologista
+urologista
+endocrinologista
+ortopedista
+pediatra
+cardiologista
+oftalmologista
+otorrinolaringologista
+psicólogo
+psiquiatra
+nutricionista
+fonoaudiólogo
+laboratório de análises clínicas
+clínica de imagem ultrassom
+clínica de vacinas

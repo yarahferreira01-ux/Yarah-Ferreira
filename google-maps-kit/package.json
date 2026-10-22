@@ -4,9 +4,14 @@
   "private": true,
   "description": "Extrator de leads do Google Maps via Places API — CSV pronto para prospecção",
   "type": "module",
-  "bin": { "maps-leads": "scrape.js" },
-  "scripts": {
-    "buscar": "node scrape.js --file buscas.txt --emails"
+  "bin": {
+    "maps-leads": "scrape.js"
   },
-  "engines": { "node": ">=18" }
+  "scripts": {
+    "buscar": "node scrape.js --file buscas.txt --emails",
+    "saude-fatima": "node scrape.js --file buscas-saude-fatima.txt --perto \"Diamond Center, Av. Universitária 750, Teresina\" --raio 1500 --excluir \"dentist|odonto|dental|ortodon|implant\" --manter \"buco|maxilo\" --emails --out saida/saude-fatima"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
