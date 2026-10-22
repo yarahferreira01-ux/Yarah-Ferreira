@@ -1,0 +1,4 @@
+# Uma busca por linha. Linhas com # são ignoradas.
+# Formato que funciona melhor: "<o que> em <cidade>"
+dentista em Goiânia
+clínica de estética em Goiânia

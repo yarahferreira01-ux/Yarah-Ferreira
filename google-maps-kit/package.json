@@ -1,0 +1,12 @@
+{
+  "name": "google-maps-kit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Extrator de leads do Google Maps via Places API — CSV pronto para prospecção",
+  "type": "module",
+  "bin": { "maps-leads": "scrape.js" },
+  "scripts": {
+    "buscar": "node scrape.js --file buscas.txt --emails"
+  },
+  "engines": { "node": ">=18" }
+}
